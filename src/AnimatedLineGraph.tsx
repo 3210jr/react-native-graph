@@ -1,5 +1,11 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { View, StyleSheet, LayoutChangeEvent } from 'react-native'
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
+import { View, StyleSheet, LayoutChangeEvent } from 'react-native';
 import {
   Canvas,
   runSpring,
@@ -12,21 +18,21 @@ import {
   vec,
   Group,
   PathCommand,
-} from '@shopify/react-native-skia'
-import type { AnimatedLineGraphProps } from './LineGraphProps'
-import { SelectionDot as DefaultSelectionDot } from './SelectionDot'
-import { createGraphPath } from './CreateGraphPath'
+} from '@shopify/react-native-skia';
+import type { AnimatedLineGraphProps } from './LineGraphProps';
+import { SelectionDot as DefaultSelectionDot } from './SelectionDot';
+import { createGraphPath } from './CreateGraphPath';
 import Reanimated, {
   runOnJS,
   useAnimatedReaction,
-} from 'react-native-reanimated'
-import { getSixDigitHex } from './utils/getSixDigitHex'
-import { GestureDetector } from 'react-native-gesture-handler'
-import { useHoldOrPanGesture } from './hooks/useHoldOrPanGesture'
-import { getYForX } from './GetYForX'
+} from 'react-native-reanimated';
+import { getSixDigitHex } from './utils/getSixDigitHex';
+import { GestureDetector } from 'react-native-gesture-handler';
+import { useHoldOrPanGesture } from './hooks/useHoldOrPanGesture';
+import { getYForX } from './GetYForX';
 
 // weird rea type bug
-const ReanimatedView = Reanimated.View as any
+const ReanimatedView = Reanimated.View as any;
 
 export function AnimatedLineGraph({
   points,
@@ -42,42 +48,42 @@ export function AnimatedLineGraph({
   BottomAxisLabel,
   ...props
 }: AnimatedLineGraphProps): React.ReactElement {
-  const [width, setWidth] = useState(0)
-  const [height, setHeight] = useState(0)
-  const interpolateProgress = useValue(0)
-  const graphPadding = lineThickness
+  const [width, setWidth] = useState(0);
+  const [height, setHeight] = useState(0);
+  const interpolateProgress = useValue(0);
+  const graphPadding = lineThickness;
 
   const onLayout = useCallback(
     ({ nativeEvent: { layout } }: LayoutChangeEvent) => {
-      setWidth(Math.round(layout.width))
-      setHeight(Math.round(layout.height))
+      setWidth(Math.round(layout.width));
+      setHeight(Math.round(layout.height));
     },
     []
-  )
+  );
 
   const straightLine = useMemo(() => {
-    const path = Skia.Path.Make()
-    path.moveTo(0, height / 2)
+    const path = Skia.Path.Make();
+    path.moveTo(0, height / 2);
     for (let i = 0; i < width - 1; i += 2) {
-      const x = i
-      const y = height / 2
-      path.cubicTo(x, y, x, y, x, y)
+      const x = i;
+      const y = height / 2;
+      path.cubicTo(x, y, x, y, x, y);
     }
 
-    return path
-  }, [height, width])
+    return path;
+  }, [height, width]);
 
-  const paths = useValue<{ from?: SkPath; to?: SkPath }>({})
-  const commands = useRef<PathCommand[]>([])
+  const paths = useValue<{ from?: SkPath; to?: SkPath }>({});
+  const commands = useRef<PathCommand[]>([]);
 
   useEffect(() => {
     if (height < 1 || width < 1) {
       // view is not yet measured!
-      return
+      return;
     }
     if (points.length < 1) {
       // points are still empty!
-      return
+      return;
     }
 
     const path = createGraphPath({
@@ -85,26 +91,26 @@ export function AnimatedLineGraph({
       graphPadding: graphPadding,
       canvasHeight: height,
       canvasWidth: width,
-    })
+    });
 
-    const previous = paths.current
-    let from: SkPath = previous.to ?? straightLine
+    const previous = paths.current;
+    let from: SkPath = previous.to ?? straightLine;
     if (previous.from != null && interpolateProgress.current < 1)
       from =
-        from.interpolate(previous.from, interpolateProgress.current) ?? from
+        from.interpolate(previous.from, interpolateProgress.current) ?? from;
 
     if (path.isInterpolatable(from)) {
       paths.current = {
         from: from,
         to: path,
-      }
+      };
     } else {
       paths.current = {
         from: path,
         to: path,
-      }
+      };
     }
-    commands.current = path.toCmds()
+    commands.current = path.toCmds();
 
     runSpring(
       interpolateProgress,
@@ -115,7 +121,7 @@ export function AnimatedLineGraph({
         damping: 400,
         velocity: 0,
       }
-    )
+    );
   }, [
     graphPadding,
     height,
@@ -124,7 +130,7 @@ export function AnimatedLineGraph({
     points,
     straightLine,
     width,
-  ])
+  ]);
 
   const gradientColors = useMemo(() => {
     if (enableFadeInMask) {
@@ -134,7 +140,7 @@ export function AnimatedLineGraph({
         `${getSixDigitHex(color)}ff`,
         `${getSixDigitHex(color)}33`,
         `${getSixDigitHex(color)}33`,
-      ]
+      ];
     } else {
       return [
         color,
@@ -142,68 +148,68 @@ export function AnimatedLineGraph({
         color,
         `${getSixDigitHex(color)}33`,
         `${getSixDigitHex(color)}33`,
-      ]
+      ];
     }
-  }, [color, enableFadeInMask])
+  }, [color, enableFadeInMask]);
 
   const path = useComputedValue(
     () => {
-      const from = paths.current.from ?? straightLine
-      const to = paths.current.to ?? straightLine
+      const from = paths.current.from ?? straightLine;
+      const to = paths.current.to ?? straightLine;
 
-      return to.interpolate(from, interpolateProgress.current)
+      return to.interpolate(from, interpolateProgress.current);
     },
     // RN Skia deals with deps differently. They are actually the required SkiaValues that the derived value listens to, not react values.
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [interpolateProgress]
-  )
+  );
 
-  const { gesture, isActive, x } = useHoldOrPanGesture({ holdDuration: 300 })
-  const circleX = useValue(0)
-  const circleY = useValue(0)
-  const pathEnd = useValue(0)
+  const { gesture, isActive, x } = useHoldOrPanGesture({ holdDuration: 300 });
+  const circleX = useValue(0);
+  const circleY = useValue(0);
+  const pathEnd = useValue(0);
 
   const setFingerX = useCallback(
     (fingerX: number) => {
-      const y = getYForX(commands.current, fingerX)
+      const y = getYForX(commands.current, fingerX);
 
       if (y != null) {
-        circleY.current = y
-        circleX.current = fingerX
+        circleY.current = y;
+        circleX.current = fingerX;
       }
-      pathEnd.current = fingerX / width
+      pathEnd.current = fingerX / width;
 
-      const index = Math.round((fingerX / width) * points.length)
-      const pointIndex = Math.min(Math.max(index, 0), points.length - 1)
-      const dataPoint = points[Math.round(pointIndex)]
-      if (dataPoint != null) onPointSelected?.(dataPoint)
+      const index = Math.round((fingerX / width) * points.length);
+      const pointIndex = Math.min(Math.max(index, 0), points.length - 1);
+      const dataPoint = points[Math.round(pointIndex)];
+      if (dataPoint != null) onPointSelected?.(dataPoint);
     },
     [circleX, circleY, onPointSelected, pathEnd, points, width]
-  )
+  );
   const setIsActive = useCallback(
     (active: boolean) => {
-      if (!active) pathEnd.current = 1
-      if (active) onGestureStart?.()
-      else onGestureEnd?.()
+      if (!active) pathEnd.current = 1;
+      if (active) onGestureStart?.();
+      else onGestureEnd?.();
     },
     [onGestureEnd, onGestureStart, pathEnd]
-  )
+  );
   useAnimatedReaction(
     () => x.value,
     (fingerX) => {
       if (isActive.value || fingerX) {
-        runOnJS(setFingerX)(fingerX)
+        runOnJS(setFingerX)(fingerX);
       }
     },
     [isActive, setFingerX, width, x]
-  )
+  );
   useAnimatedReaction(
     () => isActive.value,
     (active) => {
-      runOnJS(setIsActive)(active)
+      runOnJS(setIsActive)(active);
     },
     [isActive, setIsActive]
-  )
+  );
   const positions = useComputedValue(
     () => [
       0,
@@ -213,7 +219,7 @@ export function AnimatedLineGraph({
       1,
     ],
     [pathEnd]
-  )
+  );
 
   return (
     <View {...props}>
@@ -268,7 +274,7 @@ export function AnimatedLineGraph({
         </ReanimatedView>
       </GestureDetector>
     </View>
-  )
+  );
 }
 
 const styles = StyleSheet.create({
@@ -281,4 +287,4 @@ const styles = StyleSheet.create({
   axisRow: {
     height: 17,
   },
-})
+});
